@@ -2,36 +2,32 @@ package com.aiden.tflite.tfliteimageclassifier
 
 import android.content.Context
 import android.graphics.Bitmap
-import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.support.label.TensorLabel
+import org.tensorflow.lite.support.model.Model
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import java.nio.ByteOrder
 
 class Classifier(private var context: Context, private val modelName: String) {
-    private lateinit var interpreter: Interpreter
+    private lateinit var model: Model
     private lateinit var inputImage: TensorImage
     private lateinit var outputBuffer: TensorBuffer
     private var modelInputChannel = 0
     private var modelInputWidth = 0
     private var modelInputHeight = 0
-    private var modelOutputClasses = 0
     private val labels = listOf<String>()
 
     fun init() {
-        val model = FileUtil.loadMappedFile(context, modelName)
-        model.order(ByteOrder.nativeOrder())
-        interpreter = Interpreter(model)
+        model = Model.createModel(context, modelName)
         initModelShape()
         labels.containsAll(FileUtil.loadLabels(context, LABEL_FILE))
     }
 
     private fun initModelShape() {
-        val inputTensor = interpreter.getInputTensor(0)
+        val inputTensor = model.getInputTensor(0)
         val inputShape = inputTensor.shape()
         modelInputChannel = inputShape[0]
         modelInputWidth = inputShape[1]
@@ -39,13 +35,16 @@ class Classifier(private var context: Context, private val modelName: String) {
 
         inputImage = TensorImage(inputTensor.dataType())
 
-        val outputTensor = interpreter.getOutputTensor(0)
+        val outputTensor = model.getOutputTensor(0)
         outputBuffer = TensorBuffer.createFixedSize(outputTensor.shape(), outputTensor.dataType())
     }
 
     fun classify(image: Bitmap): Pair<String, Float> {
         inputImage = loadImage(image)
-        interpreter.run(inputImage.buffer, outputBuffer.buffer.rewind())
+        val inputs = arrayOf(inputImage.buffer)
+        val outputs = mutableMapOf<Int, Any>()
+        outputs[0] = outputBuffer.buffer.rewind()
+        model.run(inputs, outputs)
         val output = TensorLabel(labels, outputBuffer).mapWithFloatValue
         return argmax(output)
     }
@@ -67,7 +66,7 @@ class Classifier(private var context: Context, private val modelName: String) {
         } ?: "" to 0f
 
     fun finish() {
-        if (::interpreter.isInitialized) interpreter.close()
+        if (::model.isInitialized) model.close()
     }
 
     companion object {
