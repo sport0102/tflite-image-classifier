@@ -1,11 +1,17 @@
 package com.aiden.tflite.tfliteimageclassifier
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.aiden.tflite.tfliteimageclassifier.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
+    private val binding by lazy { ActivityMainBinding.inflate(layoutInflater, null, false) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(binding.root)
+        binding.btnGallery.setOnClickListener {
+            startActivity(Intent(this@MainActivity, GalleryActivity::class.java))
+        }
     }
 }

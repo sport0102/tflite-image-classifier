@@ -18,12 +18,12 @@ class Classifier(private var context: Context, private val modelName: String) {
     private var modelInputChannel = 0
     private var modelInputWidth = 0
     private var modelInputHeight = 0
-    private val labels = listOf<String>()
+    private val labels = mutableListOf<String>()
 
     fun init() {
         model = Model.createModel(context, modelName)
         initModelShape()
-        labels.containsAll(FileUtil.loadLabels(context, LABEL_FILE))
+        labels.addAll(FileUtil.loadLabels(context, LABEL_FILE))
     }
 
     private fun initModelShape() {
@@ -41,7 +41,7 @@ class Classifier(private var context: Context, private val modelName: String) {
 
     fun classify(image: Bitmap): Pair<String, Float> {
         inputImage = loadImage(image)
-        val inputs = arrayOf(inputImage.buffer)
+        val inputs = arrayOf<Any>(inputImage.buffer)
         val outputs = mutableMapOf<Int, Any>()
         outputs[0] = outputBuffer.buffer.rewind()
         model.run(inputs, outputs)
@@ -50,8 +50,11 @@ class Classifier(private var context: Context, private val modelName: String) {
     }
 
     private fun loadImage(bitmap: Bitmap): TensorImage {
-        inputImage.load(bitmap)
-
+        if (bitmap.config != Bitmap.Config.ARGB_8888) {
+            inputImage.load(convertBitmapToARGB8888(bitmap))
+        } else {
+            inputImage.load(bitmap)
+        }
         val imageProcessor = ImageProcessor.Builder()
             .add(ResizeOp(modelInputWidth, modelInputHeight, ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
             .add(NormalizeOp(0.0f, 255.0f))
@@ -59,6 +62,8 @@ class Classifier(private var context: Context, private val modelName: String) {
 
         return imageProcessor.process(inputImage)
     }
+
+    private fun convertBitmapToARGB8888(bitmap: Bitmap) = bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
     private fun argmax(map: Map<String, Float>) =
         map.entries.maxByOrNull { it.value }?.let {
@@ -70,7 +75,7 @@ class Classifier(private var context: Context, private val modelName: String) {
     }
 
     companion object {
-        const val DIGIT_CLASSIFIER = "mobilenet_imagenet_model.tflite"
+        const val IMAGENET_CLASSIFY_MODEL = "mobilenet_imagenet_model.tflite"
         const val LABEL_FILE = "labels.txt"
     }
 }
