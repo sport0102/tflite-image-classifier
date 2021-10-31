@@ -10,8 +10,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        binding.btnGallery.setOnClickListener {
-            startActivity(Intent(this@MainActivity, GalleryActivity::class.java))
+        binding.run {
+            btnGallery.setOnClickListener {
+                startActivity(Intent(this@MainActivity, GalleryActivity::class.java))
+            }
+            btnCamera.setOnClickListener {
+                startActivity(Intent(this@MainActivity, CameraActivity::class.java))
+            }
         }
+
     }
 }
